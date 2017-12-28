@@ -10,26 +10,62 @@
 #include <iostream>
 #include <cerrno>
 
+static const int G_TIME_OUT = 30;
+
+
+// returns a connected socket
+int connSocket()
+{
+    int hSocket = 0;
+    int ret = 0;
+    int err = 0;
+    timeval tTimeout;
+    fd_set wfds;
+    std::string strIP("192.168.100.245");
+    static const short nPort = 30000;
+    sockaddr_in addr;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    inet_aton(strIP.c_str(), &addr.sin_addr);
+    addr.sin_port = htons(nPort);
+
+    tTimeout.tv_sec = G_TIME_OUT;
+    tTimeout.tv_usec = 0;
+
+    while(true)
+    {
+        hSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        FD_ZERO(&wfds);
+        FD_SET(hSocket, &wfds);
+        //if(!FD_ISSET(hSocket, &wfds))
+        //    return 0;
+        connect(hSocket, (sockaddr*)(&addr), sizeof(sockaddr_in));
+        ret = select(2, 0, &wfds, 0, &tTimeout);
+        if(1 > ret)
+        {
+            std::cout << "CONNECT ISSUE: " << strerror(err) << std::endl;
+            close(hSocket);
+            hSocket = 0;
+        }
+        break;
+    }
+    return hSocket;
+}
+
+
 int main()
 {
-  int handle = 0;
-  int ret = 0;
-  std::string strIP("127.0.0.1");
-  static const short nPort = 9000;
-  sockaddr_in addr;
+    int handle = 0;
+    int ret = 0;
+    char buffer[2048];
 
-  handle = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    memset(buffer, 'a', 1000);
+    buffer[1000] = '\0';
+    handle = connSocket();
 
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  inet_aton(strIP.c_str(), &addr.sin_addr);
-  addr.sin_port = htons(nPort);
-  ret = connect(handle, (struct sockaddr*)(&addr), sizeof(addr));
+    write(handle, buffer, strlen(buffer)+1);
+    close(handle);
 
-  if(ret < 0)
-    std::cout << strerror(errno) << std::endl;
-    //perror("conn error");
-  close(handle);
-
-  return 0;
+    return 0;
 }
