@@ -11,6 +11,7 @@ void Start(const char *pcszIP, int nPort)
 
   bzero(&addr, sizeof(sockaddr_in));
   addr.sin_port = nPort;
+  addr.sin_port = htons(addr.sin_port);
   inet_aton(pcszIP, &addr.sin_addr);
   addr.sin_family = AF_INET;
 
@@ -19,10 +20,20 @@ void Start(const char *pcszIP, int nPort)
     perror("bind");
   if(-1 == listen(hSocket, nMaxConn))
     perror("listen");
-  hPeer = accept(hSocket, (sockaddr *)&addr, &size);
+  while(true)
+  {
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    hPeer = accept(hSocket, (sockaddr *)&addr, &size);
+    recv(hPeer, buffer, sizeof(buffer), 0);
 }
   
-
+void ()
+{
+  int hPeer = 0;
+  
+  while(true)
+  {
+    
 
 int main(int argc, char *args[])
 {
@@ -30,7 +41,10 @@ int main(int argc, char *args[])
   std::string strIPSelf("127.0.0.1");
 
   if(argc < 2)
+  {
+    std::cout << "at least one param as port!" << std::endl;
     return -1;
+  }
   else if(2 == argc)
     nPort = aton(args[1]);
   else if(3 == argc)
